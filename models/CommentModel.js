@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-const musicSchema= new mongoose.Schema({
+const comSchema= new mongoose.Schema({
     info: {
         type: String,
         required: true
@@ -12,19 +12,15 @@ const musicSchema= new mongoose.Schema({
         required: true
     },
 
+    m_id:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "musics",
+        required: true
+    },
+
     likes: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
-    }],
-
-    genre: [{
-        type: String,
-        required: true
-    }],
-
-    comments:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "comments"
     }],
 
     createdAt: {
@@ -33,4 +29,4 @@ const musicSchema= new mongoose.Schema({
     }
 })
 
-module.exports= mongoose.model('musics', musicSchema)
+module.exports= mongoose.model('comments', comSchema)

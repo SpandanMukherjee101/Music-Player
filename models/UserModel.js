@@ -46,6 +46,16 @@ const UserSchema = new mongoose.Schema({
         ref: "users"
     }],
 
+    comments: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "comments"
+    }],
+
+    comLikes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "comments"
+    }],
+    
     createdAt: {
         type: Date,
         default: Date.now
