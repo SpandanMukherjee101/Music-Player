@@ -15,7 +15,7 @@ mongoose.connect(URI,{}).then(console.log("MongoDB connected")).catch((e)=>{cons
 app.use("/api/", Routes)
 
 app.get("/", (req, res)=>{
-    res.status(200).send("Welcome!<br>This is a prototype SNS Backend!!!")
+    res.status(200).send("Welcome! This is a prototype Music Player Backend!!!")
 })
 
 app.listen(8000,()=>{
