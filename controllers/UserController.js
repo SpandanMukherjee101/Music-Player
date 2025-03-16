@@ -21,7 +21,7 @@ class UserController {
                 if (user) res.status(409).send({ data: "User exists already!" })
                 let id = await UserModel.findOne({userid: userdata.userid})
                 if(id) {
-                    res.status(409).send({ data: "Userid exists already!"})
+                    res.status(404).send({ data: "Userid exists already!"})
                     return
                 }
                 await UserModel.create(userdata)
@@ -50,7 +50,7 @@ class UserController {
                     const token = jwt.sign({ email: user.email }, SECRET_KEY, { expiresIn: '900000h' })
                     res.json(token)
                 }
-                else res.status(401).send({ data: "Unauthorized access!!!" })
+                else res.status(401).send("Wrong Password!!!")
             } catch (err) {
                 res.status(404).send("User not found!!!")
             }
@@ -68,7 +68,8 @@ class UserController {
                 userid: user.userid,
                 name: user.name,
                 email: user.email,
-                musics: user.musics
+                musics: user.musics,
+                likes: user.likes
             })
         } catch (e) {
             console.log(e)

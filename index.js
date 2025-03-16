@@ -4,6 +4,9 @@ const express= require("express")
 let app= express()
 app.use(express.json())
 
+const cors = require('cors');
+app.use(cors())
+
 const mongoose= require("mongoose")
 
 require('dotenv').config()

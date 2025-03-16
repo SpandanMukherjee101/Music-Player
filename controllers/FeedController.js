@@ -20,6 +20,21 @@ class FeedController {
             let musics=[];
             let startIndex = (start - 1) * limit;
             switch (req.params.genre) {
+                case 'liked':
+                    const decoded = req.email
+                    const user= await UserModel.findOne({email: decoded})
+                    music_ids = user.likes                    
+                    if (!music_ids) {
+                        res.status(200).send({data: "None"})
+                        break;
+                    }                    
+                    for (const element of music_ids) {
+                        let music = await MusicModel.findById(element)
+                        musics.push(music)
+                    }
+                    res.json(musics)
+                    break;
+
                 case 'all':
                     total = await MusicModel.countDocuments();
                     musics = await MusicModel.find().skip(startIndex).limit(limit)
