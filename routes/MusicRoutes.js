@@ -1,9 +1,10 @@
 const musics= require("../controllers/MusicController.js")
+const upload= require("../utils/MulterMiddleware.js")
 
 const express= require("express")
 let musicsRoutes= express()
 
-musicsRoutes.post("/upload", musics.upload)
+musicsRoutes.post("/upload", upload.single('file'), musics.upload)
 musicsRoutes.get("/search/:name", musics.search)
 musicsRoutes.get("/play/:id", musics.play)
 musicsRoutes.delete("/delete", musics.delete)

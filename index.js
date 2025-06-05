@@ -15,6 +15,15 @@ const URI= process.env.MONGO_URI
 
 mongoose.connect(URI,{}).then(console.log("MongoDB connected")).catch((e)=>{console.log(e)});
 
+const rateLimit = require('express-rate-limit')
+
+const limiter= rateLimit({
+    windowMs: 1000,
+    limit: 1
+})
+
+app.use(limiter)
+
 app.use("/api/", Routes)
 
 app.get("/", (req, res)=>{
@@ -24,3 +33,5 @@ app.get("/", (req, res)=>{
 app.listen(8000,()=>{
     console.log("Port connected");
 })
+
+//0C9MKZkGoTXzuqr5
