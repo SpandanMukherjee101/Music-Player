@@ -16,18 +16,18 @@ class FeedController {
             let start = parseInt(req.params.pg) || 1;
             let limit = 10;
             let total;
-            let music_ids=[];
-            let musics=[];
+            let music_ids = [];
+            let musics = [];
             let startIndex = (start - 1) * limit;
             switch (req.params.genre) {
                 case 'liked':
                     const decoded = req.email
-                    const user= await UserModel.findOne({email: decoded})
-                    music_ids = user.likes                    
+                    const user = await UserModel.findOne({ email: decoded })
+                    music_ids = user.likes
                     if (!music_ids) {
-                        res.status(200).send({data: "None"})
+                        res.status(200).send({ data: "None" })
                         break;
-                    }                    
+                    }
                     for (const element of music_ids) {
                         let music = await MusicModel.findById(element)
                         musics.push(music)
@@ -192,6 +192,7 @@ class FeedController {
                     break;
 
                 default:
+                    res.status(400).send({ data: "Invalid genre" });
                     break;
             }
         } catch (err) {

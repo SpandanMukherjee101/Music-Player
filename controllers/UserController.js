@@ -18,10 +18,10 @@ class UserController {
 
             try {
                 let user = await UserModel.findOne({ email: userdata.email })
-                if (user) res.status(409).send({ data: "User exists already!" })
-                let id = await UserModel.findOne({userid: userdata.userid})
-                if(id) {
-                    res.status(404).send({ data: "Userid exists already!"})
+                if (user) return res.status(409).send({ data: "User exists already!" })
+                let id = await UserModel.findOne({ userid: userdata.userid })
+                if (id) {
+                    res.status(404).send({ data: "Userid exists already!" })
                     return
                 }
                 await UserModel.create(userdata)
@@ -79,19 +79,19 @@ class UserController {
     async up(req, res) {
         try {
             const decoded = req.email
-            
+
             const userdata = {
                 newpass: await bcrypt.hash(req.body.newpass, 10),
                 oldpass: req.body.oldpass
             }
-            
+
             try {
-                const user = await UserModel.findOne({ email: decoded})
-                
-                let b = await bcrypt.compare( userdata.oldpass, user.password)
-                
+                const user = await UserModel.findOne({ email: decoded })
+
+                let b = await bcrypt.compare(userdata.oldpass, user.password)
+
                 if (b) {
-                    const updatedUser= await UserModel.findOneAndUpdate({email: decoded}, {password: userdata.newpass})
+                    const updatedUser = await UserModel.findOneAndUpdate({ email: decoded }, { password: userdata.newpass })
                     res.json({
                         name: updatedUser.name,
                         email: updatedUser.email,
@@ -109,9 +109,9 @@ class UserController {
     async del(req, res) {
         try {
             const decoded = req.email
-            
-            await UserModel.findOneAndDelete({email: decoded})
-            res.status(200).send({data: "Deleted"})
+
+            await UserModel.findOneAndDelete({ email: decoded })
+            res.status(200).send({ data: "Deleted" })
         } catch (e) {
             console.log(e)
         }
