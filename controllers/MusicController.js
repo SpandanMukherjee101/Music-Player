@@ -10,158 +10,156 @@ const metalModel = require("../models/MetalModel")
 const hiphopModel = require("../models/HipHopModel")
 const indieModel = require("../models/IndieModel")
 
+const genreModels = {
+    pop: popModel,
+    rock: rockModel,
+    edm: edmModel,
+    classical: classicalModel,
+    blue: blueModel,
+    jazz: jazzModel,
+    metal: metalModel,
+    hiphop: hiphopModel,
+    indie: indieModel,
+}
+
 class PostController {
-    async upload(req, res) {
+    async upload(req, res, next) {
         try {
-            const decoded = req.email
-            const user = await UserModel.findOne({ email: decoded })
+            const { info, genre } = req.body
 
-            const music = await MusicModel.create({ info: req.body.info, genre: req.body.genre, user: user._id })
-
-            user.musics.push(music._id)
-            await user.save();
-
-            if (!req.body.genre || !Array.isArray(req.body.genre)) {
-                return res.status(400).send("Genre must be an array");
+            if (!info || typeof info !== "string" || !info.trim()) {
+                return res.status(400).json({ message: "Music info is required" })
             }
 
-            for (const element of req.body.genre) {
-                switch (element) {
-                    case 'pop':
-                        await popModel.create({ m_id: music._id })
-                        break;
+            if (!Array.isArray(genre) || genre.length === 0) {
+                return res.status(400).json({ message: "At least one genre is required" })
+            }
 
-                    case 'rock':
-                        await rockModel.create({ m_id: music._id })
-                        break;
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
 
-                    case 'edm':
-                        await edmModel.create({ m_id: music._id })
-                        break;
+            const music = await MusicModel.create({ info: info.trim(), genre, user: user._id })
+            user.musics.push(music._id)
+            await user.save()
 
-                    case 'classical':
-                        await classicalModel.create({ m_id: music._id })
-                        break;
-
-                    case 'blue':
-                        await blueModel.create({ m_id: music._id })
-                        break;
-
-                    case 'jazz':
-                        await jazzModel.create({ m_id: music._id })
-                        break;
-
-                    case 'metal':
-                        await metalModel.create({ m_id: music._id })
-                        break;
-
-                    case 'hiphop':
-                        await hiphopModel.create({ m_id: music._id })
-                        break;
-
-                    case 'indie':
-                        await indieModel.create({ m_id: music._id })
-                        break;
-
-                    default:
-                        break;
+            for (const element of genre) {
+                const model = genreModels[element]
+                if (model) {
+                    await model.create({ m_id: music._id })
                 }
             }
 
-            res.status(200).send(music);
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            res.status(201).json(music)
+        } catch (error) {
+            next(error)
         }
     }
 
-    async play(req, res) {
+    async play(req, res, next) {
         try {
-            const id = req.params.id;
-            const music = await MusicModel.findOne({ _id: id })
-            console.log(music);
-
-
-            const user = await UserModel.findOne({ _id: music.user })
-
-            res.status(200).send({ userid: user.userid, info: music.info, genre: music.genre, likes: music.likes.length });
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
-        }
-    }
-
-    async search(req, res) {
-        try {
-            const musics = await MusicModel.find({ info: req.params.name })
-            res.json(musics)
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
-        }
-    }
-
-    async delete(req, res) {
-        try {
-            const decoded = req.email
-
-            const id = req.body.id
-            const music = await MusicModel.findOne({ _id: id })
-
-            const user = await UserModel.findOne({ _id: music.user })
-
-            if (decoded === user.email) {
-                user.musics.pull(music._id)
-                await user.save()
-                await MusicModel.findByIdAndDelete(id)
-                res.status(200).send({ data: "Deleted" })
+            const music = await MusicModel.findById(req.params.id)
+            if (!music) {
+                return res.status(404).json({ message: "Music not found" })
             }
 
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            const user = await UserModel.findById(music.user)
+            if (!user) {
+                return res.status(404).json({ message: "Owner not found" })
+            }
+
+            res.status(200).json({ userid: user.userid, info: music.info, genre: music.genre, likes: music.likes.length })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async like(req, res) {
+    async search(req, res, next) {
         try {
-            const decoded = req.email
+            const query = req.params.name?.trim()
+            if (!query) {
+                return res.status(400).json({ message: "Search term is required" })
+            }
 
-            const user = await UserModel.findOne({ email: decoded })
-
-            const music = await MusicModel.findById(req.body.id)
-
-            music.likes.push(user._id)
-            await music.save()
-
-            user.likes.push(music._id)
-            await user.save()
-
-            res.json({ likes: music.likes })
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            const musics = await MusicModel.find({ info: { $regex: query, $options: "i" } }).limit(20)
+            res.json(musics)
+        } catch (error) {
+            next(error)
         }
     }
 
-    async unlike(req, res) {
+    async delete(req, res, next) {
         try {
-            const decoded = req.email
-
-            const user = await UserModel.findOne({ email: decoded })
-
             const music = await MusicModel.findById(req.body.id)
+            if (!music) {
+                return res.status(404).json({ message: "Music not found" })
+            }
 
-            music.likes.pull(user._id)
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            if (!music.user.equals(user._id)) {
+                return res.status(403).json({ message: "Unauthorized" })
+            }
+
+            user.musics.pull(music._id)
+            await user.save()
+            await MusicModel.findByIdAndDelete(music._id)
+            res.status(200).json({ message: "Deleted" })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async like(req, res, next) {
+        try {
+            const music = await MusicModel.findById(req.body.id)
+            if (!music) {
+                return res.status(404).json({ message: "Music not found" })
+            }
+
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            const alreadyLiked = music.likes.some((id) => id.equals(user._id))
+            if (!alreadyLiked) {
+                music.likes.push(user._id)
+                user.likes.push(music._id)
+                await music.save()
+                await user.save()
+            }
+
+            res.json({ likes: music.likes.length })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async unlike(req, res, next) {
+        try {
+            const music = await MusicModel.findById(req.body.id)
+            if (!music) {
+                return res.status(404).json({ message: "Music not found" })
+            }
+
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            music.likes = music.likes.filter((id) => !id.equals(user._id))
+            user.likes = user.likes.filter((id) => !id.equals(music._id))
             await music.save()
-
-            user.likes.pull(music._id)
             await user.save()
 
-            res.json({ likes: music.likes })
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            res.json({ likes: music.likes.length })
+        } catch (error) {
+            next(error)
         }
     }
 }

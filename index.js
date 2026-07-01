@@ -1,37 +1,74 @@
+const express = require("express")
+const cors = require("cors")
+const helmet = require("helmet")
+const morgan = require("morgan")
+const mongoose = require("mongoose")
+const rateLimit = require("express-rate-limit")
+require("dotenv").config()
+
 const Routes = require("./routes/Routes.js")
 
-const express = require("express")
-let app = express()
-app.use(express.json())
+const app = express()
 
-const cors = require('cors');
-app.use(cors())
-
-const mongoose = require("mongoose")
-
-require('dotenv').config()
-
-const URI = process.env.MONGO_URI
-
-mongoose.connect(URI, {}).then(() => console.log("MongoDB connected")).catch((e) => { console.log(e) });
-
-const rateLimit = require('express-rate-limit')
+app.disable("x-powered-by")
+app.use(helmet())
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*", credentials: true }))
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"))
+app.use(express.json({ limit: "1mb" }))
+app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 
 const limiter = rateLimit({
-    windowMs: 1000,
-    limit: 1
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
 })
-
 app.use(limiter)
+
+const PORT = Number(process.env.PORT) || 8000
+const URI = process.env.MONGO_URI
+const SECRET_KEY = process.env.SECRET_KEY
+
+if (!URI) {
+    console.error("MONGO_URI is not defined")
+    process.exit(1)
+}
+
+if (!SECRET_KEY) {
+    console.error("SECRET_KEY is not defined")
+    process.exit(1)
+}
+
+mongoose.set("strictQuery", true)
+mongoose.connect(URI, { serverSelectionTimeoutMS: 10000 })
+    .then(() => console.log("MongoDB connected"))
+    .catch((error) => {
+        console.error("MongoDB connection failed:", error.message)
+    })
 
 app.use("/api/", Routes)
 
 app.get("/", (req, res) => {
-    res.status(200).send("Welcome! This is a prototype Music Player Backend!!!")
+    res.status(200).json({ message: "Welcome! This is a production-ready Music Player Backend API." })
 })
 
-app.listen(8000, () => {
-    console.log("Port connected");
+app.use((req, res) => {
+    res.status(404).json({ message: "Route not found" })
 })
 
-//0C9MKZkGoTXzuqr5
+app.use((err, req, res, next) => {
+    console.error(err)
+    const status = err.status || 500
+    const message = process.env.NODE_ENV === "production" ? "Internal server error" : err.message
+    res.status(status).json({ message })
+})
+
+const server = app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`)
+})
+
+process.on("SIGTERM", () => {
+    server.close(() => {
+        mongoose.connection.close(false)
+    })
+})

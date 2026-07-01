@@ -10,194 +10,71 @@ const metalModel = require("../models/MetalModel")
 const hiphopModel = require("../models/HipHopModel")
 const indieModel = require("../models/IndieModel")
 
+const genreModels = {
+    pop: popModel,
+    rock: rockModel,
+    edm: edmModel,
+    classical: classicalModel,
+    blue: blueModel,
+    jazz: jazzModel,
+    metal: metalModel,
+    hiphop: hiphopModel,
+    indie: indieModel,
+}
+
 class FeedController {
-    async get(req, res) {
+    async get(req, res, next) {
         try {
-            let start = parseInt(req.params.pg) || 1;
-            let limit = 10;
-            let total;
-            let music_ids = [];
-            let musics = [];
-            let startIndex = (start - 1) * limit;
-            switch (req.params.genre) {
-                case 'liked':
-                    const decoded = req.email
-                    const user = await UserModel.findOne({ email: decoded })
-                    music_ids = user.likes
-                    if (!music_ids) {
-                        res.status(200).send({ data: "None" })
-                        break;
-                    }
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element)
-                        musics.push(music)
-                    }
-                    res.json(musics)
-                    break;
+            const start = parseInt(req.params.pg, 10) || 1
+            const limit = 10
+            const startIndex = (start - 1) * limit
+            const genre = req.params.genre
 
-                case 'all':
-                    total = await MusicModel.countDocuments();
-                    musics = await MusicModel.find().skip(startIndex).limit(limit)
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
+            if (genre === "liked") {
+                const user = await UserModel.findOne({ email: req.email })
+                if (!user) {
+                    return res.status(404).json({ message: "User not found" })
+                }
 
-                case 'pop':
-                    total = await popModel.countDocuments();
-                    music_ids = await popModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
+                const musicIds = user.likes || []
+                if (musicIds.length === 0) {
+                    return res.status(200).json({ data: [] })
+                }
 
-                case 'rock':
-                    total = await rockModel.countDocuments();
-                    music_ids = await rockModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'edm':
-                    total = await edmModel.countDocuments();
-                    music_ids = await edmModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'classical':
-                    total = await classicalModel.countDocuments();
-                    music_ids = await classicalModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'blue':
-                    total = await blueModel.countDocuments();
-                    music_ids = await blueModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'jazz':
-                    total = await jazzModel.countDocuments();
-                    music_ids = await jazzModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'metal':
-                    total = await metalModel.countDocuments();
-                    music_ids = await metalModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'hiphop':
-                    total = await hiphopModel.countDocuments();
-                    music_ids = await hiphopModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                case 'indie':
-                    total = await indieModel.countDocuments();
-                    music_ids = await indieModel.find().skip(startIndex).limit(limit)
-                    for (const element of music_ids) {
-                        let music = await MusicModel.findById(element.m_id)
-                        musics.push(music)
-                    }
-                    res.json({
-                        start,
-                        limit,
-                        total,
-                        pages: Math.ceil(total / limit),
-                        data: musics
-                    })
-                    break;
-
-                default:
-                    res.status(400).send({ data: "Invalid genre" });
-                    break;
+                const musics = await Promise.all(musicIds.map((id) => MusicModel.findById(id)))
+                return res.json(musics.filter(Boolean))
             }
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+
+            if (genre === "all") {
+                const total = await MusicModel.countDocuments()
+                const musics = await MusicModel.find().skip(startIndex).limit(limit)
+                return res.json({
+                    start,
+                    limit,
+                    total,
+                    pages: Math.ceil(total / limit),
+                    data: musics,
+                })
+            }
+
+            const model = genreModels[genre]
+            if (!model) {
+                return res.status(400).json({ message: "Invalid genre" })
+            }
+
+            const total = await model.countDocuments()
+            const entries = await model.find().skip(startIndex).limit(limit)
+            const musics = await Promise.all(entries.map((entry) => MusicModel.findById(entry.m_id)))
+
+            return res.json({
+                start,
+                limit,
+                total,
+                pages: Math.ceil(total / limit),
+                data: musics.filter(Boolean),
+            })
+        } catch (error) {
+            next(error)
         }
     }
 }

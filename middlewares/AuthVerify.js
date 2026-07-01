@@ -1,17 +1,25 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken")
+require("dotenv").config()
 
-require('dotenv').config()
 const SECRET_KEY = process.env.SECRET_KEY
 
 module.exports = (req, res, next) => {
-    const token = req.headers['token']
-    if (!token) return res.status(401).send({ message: "Token is required" });
+    if (!SECRET_KEY) {
+        return res.status(500).json({ message: "Server misconfiguration" })
+    }
 
-    const cleanedtoken = token.replace(/^"|"$/g, '')
+    const authHeader = req.headers.authorization
+    const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : req.headers.token || req.headers["x-auth-token"]
 
-    jwt.verify(cleanedtoken, SECRET_KEY, (error, decoded) => {
+    if (!token) {
+        return res.status(401).json({ message: "Token is required" })
+    }
+
+    jwt.verify(token.replace(/^"|"$/g, ""), SECRET_KEY, (error, decoded) => {
         if (error) {
-            return res.status(403).send({ message: error })
+            return res.status(403).json({ message: "Invalid token" })
         }
 
         req.email = decoded.email

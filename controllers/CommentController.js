@@ -1,112 +1,148 @@
-const CommentModel= require('../models/CommentModel')
+const CommentModel = require("../models/CommentModel")
 const UserModel = require("../models/UserModel")
 const MusicModel = require("../models/MusicModel")
 
-class CommentController{
-    async create(req, res){
+class CommentController {
+    async create(req, res, next) {
         try {
-            const user= await UserModel.findOne({email: req.email})
-            
-            const comment= await CommentModel.create({info: req.body.info, user: user._id, m_id: req.body.m_id})
-            
+            const { info, m_id } = req.body
+            if (!info || !m_id) {
+                return res.status(400).json({ message: "Comment text and music id are required" })
+            }
+
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            const music = await MusicModel.findById(m_id)
+            if (!music) {
+                return res.status(404).json({ message: "Music not found" })
+            }
+
+            const comment = await CommentModel.create({ info, user: user._id, m_id })
             user.comments.push(comment._id)
             await user.save()
-            const music= await MusicModel.findById(comment.m_id)
             music.comments.push(comment._id)
             await music.save()
-            res.json({
-                comment,
-                user,
-                music
-            })
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+
+            res.status(201).json({ comment, user: { userid: user.userid, name: user.name }, music: { id: music._id } })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async get(req, res){
+    async get(req, res, next) {
         try {
-            let start = parseInt(req.params.pg) || 1;
-            let limit = 10;
-            let startIndex = (start - 1) * limit;
+            const start = parseInt(req.params.pg, 10) || 1
+            const limit = 10
+            const startIndex = (start - 1) * limit
 
-            const comment= await CommentModel.find({m_id: req.params.m_id}).skip(startIndex).limit(limit)
-            res.json(comment)
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            const comments = await CommentModel.find({ m_id: req.params.m_id }).skip(startIndex).limit(limit)
+            res.json(comments)
+        } catch (error) {
+            next(error)
         }
     }
 
-    async edit(req, res){
+    async edit(req, res, next) {
         try {
-            const comment= await CommentModel.findByIdAndUpdate(req.body.id, {info: req.body.info})
-            res.json({data:"Updated!"})
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            const comment = await CommentModel.findById(req.body.id)
+            if (!comment) {
+                return res.status(404).json({ message: "Comment not found" })
+            }
+
+            if (!comment.user.equals((await UserModel.findOne({ email: req.email }))._id)) {
+                return res.status(403).json({ message: "Unauthorized" })
+            }
+
+            comment.info = req.body.info
+            await comment.save()
+            res.json({ message: "Updated!" })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async delete(req, res){
+    async delete(req, res, next) {
         try {
-            const comment= await CommentModel.findById(req.body.cid)
-            
-            const user= await UserModel.findOne({email: req.email})
+            const comment = await CommentModel.findById(req.body.cid)
+            if (!comment) {
+                return res.status(404).json({ message: "Comment not found" })
+            }
+
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            if (!comment.user.equals(user._id)) {
+                return res.status(403).json({ message: "Unauthorized" })
+            }
+
             user.comments.pull(comment._id)
             await user.save()
-            
-            const music= await MusicModel.findById(comment.m_id)
-            music.comments.pull(comment._id)
-            await music.save()
-            
+
+            const music = await MusicModel.findById(comment.m_id)
+            if (music) {
+                music.comments.pull(comment._id)
+                await music.save()
+            }
+
             await comment.deleteOne()
-
-            res.status(200).send({data: "Success!"})
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            res.status(200).json({ message: "Success!" })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async like(req, res){
+    async like(req, res, next) {
         try {
-            const user= await UserModel.findOne({email: req.email})
-            
-            const comment= await CommentModel.findById(req.body.cid)
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
 
-            user.comLikes.push(comment._id)
-            await user.save()
+            const comment = await CommentModel.findById(req.body.cid)
+            if (!comment) {
+                return res.status(404).json({ message: "Comment not found" })
+            }
 
-            comment.likes.push(user._id)
-            await comment.save()
+            if (!user.comLikes.some((id) => id.equals(comment._id))) {
+                user.comLikes.push(comment._id)
+                comment.likes.push(user._id)
+                await user.save()
+                await comment.save()
+            }
 
-            res.status(200).send({data: "Success!"})
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            res.status(200).json({ message: "Success!" })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async unlike(req, res){
+    async unlike(req, res, next) {
         try {
-            const user= await UserModel.findOne({email: req.email})
-            
-            const comment= await CommentModel.findById(req.body.cid)
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
 
-            user.comLikes.pull(comment._id)
+            const comment = await CommentModel.findById(req.body.cid)
+            if (!comment) {
+                return res.status(404).json({ message: "Comment not found" })
+            }
+
+            user.comLikes = user.comLikes.filter((id) => !id.equals(comment._id))
+            comment.likes = comment.likes.filter((id) => !id.equals(user._id))
             await user.save()
-
-            comment.likes.pull(user._id)
             await comment.save()
 
-            res.status(200).send({data: "Success!"})
-        } catch (err) {
-            res.status(500).send("Server Error")
-            console.log(err);
+            res.status(200).json({ message: "Success!" })
+        } catch (error) {
+            next(error)
         }
     }
 }
 
-module.exports= new CommentController()
+module.exports = new CommentController()

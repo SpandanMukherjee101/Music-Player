@@ -1,119 +1,129 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 const UserModel = require("../models/UserModel")
+require("dotenv").config()
 
-const jwt = require('jsonwebtoken')
-
-require('dotenv').config()
 const SECRET_KEY = process.env.SECRET_KEY
 
+const createToken = (email) => jwt.sign({ email }, SECRET_KEY, { expiresIn: "24h" })
+
 class UserController {
-    async signup(req, res) {
+    async signup(req, res, next) {
         try {
-            const userdata = {
-                userid: req.body.userid,
-                name: req.body.name,
-                email: req.body.email,
-                password: await bcrypt.hash(req.body.password, 10),
+            const { userid, name, email, password } = req.body
+
+            if (!userid || !name || !email || !password) {
+                return res.status(400).json({ message: "All fields are required" })
             }
 
-            try {
-                let user = await UserModel.findOne({ email: userdata.email })
-                if (user) return res.status(409).send({ data: "User exists already!" })
-                let id = await UserModel.findOne({ userid: userdata.userid })
-                if (id) {
-                    res.status(404).send({ data: "Userid exists already!" })
-                    return
-                }
-                await UserModel.create(userdata)
-                const token = jwt.sign({ email: userdata.email }, SECRET_KEY, { expiresIn: '900000h' })
-                res.json(token)
-            } catch (err) {
-                console.log(err)
-            }
-        }
-        catch (e) {
-            console.log(e)
-        }
-    }
-
-    async login(req, res) {
-        try {
-            const userdata = {
-                email: req.body.email,
-                password: req.body.password
+            if (typeof password !== "string" || password.length < 8) {
+                return res.status(400).json({ message: "Password must be at least 8 characters" })
             }
 
-            try {
-                const user = await UserModel.findOne({ email: userdata.email })
-                let b = await bcrypt.compare(userdata.password, user.password)
-                if (b) {
-                    const token = jwt.sign({ email: user.email }, SECRET_KEY, { expiresIn: '900000h' })
-                    res.json(token)
-                }
-                else res.status(401).send("Wrong Password!!!")
-            } catch (err) {
-                res.status(404).send("User not found!!!")
+            const normalizedEmail = email.toLowerCase().trim()
+            const normalizedUserid = userid.trim()
+
+            const existingUser = await UserModel.findOne({ $or: [{ email: normalizedEmail }, { userid: normalizedUserid }] })
+            if (existingUser) {
+                return res.status(409).json({ message: "User already exists" })
             }
-        } catch (e) {
-            console.log(e)
+
+            const hashedPassword = await bcrypt.hash(password, 12)
+            const user = await UserModel.create({
+                userid: normalizedUserid,
+                name: name.trim(),
+                email: normalizedEmail,
+                password: hashedPassword,
+            })
+
+            const token = createToken(user.email)
+            res.status(201).json({ token, user: { userid: user.userid, name: user.name, email: user.email } })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async prof(req, res) {
+    async login(req, res, next) {
         try {
-            const decoded = req.email
+            const { email, password } = req.body
 
-            const user = await UserModel.findOne({ email: decoded })
+            if (!email || !password) {
+                return res.status(400).json({ message: "Email and password are required" })
+            }
+
+            const user = await UserModel.findOne({ email: email.toLowerCase().trim() })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password)
+            if (!isMatch) {
+                return res.status(401).json({ message: "Invalid credentials" })
+            }
+
+            const token = createToken(user.email)
+            res.json({ token, user: { userid: user.userid, name: user.name, email: user.email } })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async prof(req, res, next) {
+        try {
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
             res.json({
                 userid: user.userid,
                 name: user.name,
                 email: user.email,
                 musics: user.musics,
-                likes: user.likes
+                likes: user.likes,
             })
-        } catch (e) {
-            console.log(e)
+        } catch (error) {
+            next(error)
         }
     }
 
-    async up(req, res) {
+    async up(req, res, next) {
         try {
-            const decoded = req.email
+            const { oldpass, newpass } = req.body
 
-            const userdata = {
-                newpass: await bcrypt.hash(req.body.newpass, 10),
-                oldpass: req.body.oldpass
+            if (!oldpass || !newpass) {
+                return res.status(400).json({ message: "Current and new password are required" })
             }
 
-            try {
-                const user = await UserModel.findOne({ email: decoded })
-
-                let b = await bcrypt.compare(userdata.oldpass, user.password)
-
-                if (b) {
-                    const updatedUser = await UserModel.findOneAndUpdate({ email: decoded }, { password: userdata.newpass })
-                    res.json({
-                        name: updatedUser.name,
-                        email: updatedUser.email,
-                    })
-                }
-                else res.status(401).send({ data: "Unauthorized access!!!" })
-            } catch (err) {
-                res.status(404).send("User not found!!!")
+            if (typeof newpass !== "string" || newpass.length < 8) {
+                return res.status(400).json({ message: "New password must be at least 8 characters" })
             }
-        } catch (e) {
-            console.log(e)
+
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            const isMatch = await bcrypt.compare(oldpass, user.password)
+            if (!isMatch) {
+                return res.status(401).json({ message: "Current password is incorrect" })
+            }
+
+            user.password = await bcrypt.hash(newpass, 12)
+            await user.save()
+
+            res.json({ name: user.name, email: user.email })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async del(req, res) {
+    async del(req, res, next) {
         try {
-            const decoded = req.email
-
-            await UserModel.findOneAndDelete({ email: decoded })
-            res.status(200).send({ data: "Deleted" })
-        } catch (e) {
-            console.log(e)
+            await UserModel.findOneAndDelete({ email: req.email })
+            res.status(200).json({ message: "Deleted" })
+        } catch (error) {
+            next(error)
         }
     }
 }

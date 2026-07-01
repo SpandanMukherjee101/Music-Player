@@ -1,75 +1,97 @@
 const UserModel = require("../models/UserModel")
 
 class followController {
-    async search(req, res) {
+    async search(req, res, next) {
         try {
             const userFind = await UserModel.findOne({ userid: req.params.uid })
-            res.status(200).send({ name: userFind.name, musics: userFind.musics })
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Server Error")
+            if (!userFind) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            res.status(200).json({ name: userFind.name, musics: userFind.musics })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async follow(req, res) {
+    async follow(req, res, next) {
         try {
-            const decoded = req.email
-            const user = await UserModel.findOne({ email: decoded })
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
             const userFind = await UserModel.findOne({ userid: req.params.uid })
+            if (!userFind) {
+                return res.status(404).json({ message: "Target user not found" })
+            }
+
+            if (userFind._id.equals(user._id)) {
+                return res.status(400).json({ message: "You cannot follow yourself" })
+            }
+
+            const alreadyFollowing = user.following.some((id) => id.equals(userFind._id))
+            if (alreadyFollowing) {
+                return res.status(409).json({ message: "Already following" })
+            }
+
             user.following.push(userFind._id)
-            await user.save();
             userFind.followers.push(user._id)
-            await userFind.save();
-            res.status(200).send({ data: "Done!" })
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Server Error")
+            await user.save()
+            await userFind.save()
+            res.status(200).json({ message: "Done!" })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async unfollow(req, res) {
+    async unfollow(req, res, next) {
         try {
-            const decoded = req.email
-            const user = await UserModel.findOne({ email: decoded })
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
-            user.following.pull(userFind._id)
-            await user.save();
-            userFind.followers.pull(user._id)
-            await userFind.save();
-            res.status(200).send({ data: "Done!" })
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Server Error")
-        }
-    }
-
-    async followers(req, res) {
-        let arr = []
-        try {
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
-            for (const uid of userFind.followers) {
-                const user = await UserModel.findOne({ _id: uid })
-                arr.push(user.userid)
+            const user = await UserModel.findOne({ email: req.email })
+            if (!user) {
+                return res.status(404).json({ message: "User not found" })
             }
-            res.status(200).send({ userList: arr })
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Server Error")
+
+            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            if (!userFind) {
+                return res.status(404).json({ message: "Target user not found" })
+            }
+
+            user.following = user.following.filter((id) => !id.equals(userFind._id))
+            userFind.followers = userFind.followers.filter((id) => !id.equals(user._id))
+            await user.save()
+            await userFind.save()
+            res.status(200).json({ message: "Done!" })
+        } catch (error) {
+            next(error)
         }
     }
 
-    async following(req, res) {
-        let arr = []
+    async followers(req, res, next) {
         try {
             const userFind = await UserModel.findOne({ userid: req.params.uid })
-            for (const uid of userFind.following) {
-                const user = await UserModel.findOne({ _id: uid })
-                arr.push(user.userid)
+            if (!userFind) {
+                return res.status(404).json({ message: "User not found" })
             }
-            res.status(200).send({ userList: arr })
-        } catch (err) {
-            console.log(err);
-            res.status(500).send("Server Error")
+
+            const followers = await Promise.all(userFind.followers.map((id) => UserModel.findById(id)))
+            res.status(200).json({ userList: followers.filter(Boolean).map((entry) => entry.userid) })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async following(req, res, next) {
+        try {
+            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            if (!userFind) {
+                return res.status(404).json({ message: "User not found" })
+            }
+
+            const following = await Promise.all(userFind.following.map((id) => UserModel.findById(id)))
+            res.status(200).json({ userList: following.filter(Boolean).map((entry) => entry.userid) })
+        } catch (error) {
+            next(error)
         }
     }
 }
