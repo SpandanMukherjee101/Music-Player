@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit")
 require("dotenv").config()
 
 const Routes = require("./routes/Routes.js")
+const connectDB = require("./config/db.js")
 
 const app = express()
 
@@ -48,12 +49,9 @@ if (!SECRET_KEY) {
     process.exit(1)
 }
 
-mongoose.set("strictQuery", true)
-mongoose.connect(URI, { serverSelectionTimeoutMS: 10000 })
-    .then(() => console.log("MongoDB connected"))
-    .catch((error) => {
-        console.error("MongoDB connection failed:", error.message)
-    })
+connectDB().catch((error) => {
+    console.error("Initial MongoDB connection failed:", error.message)
+})
 
 app.use("/api/", Routes)
 
