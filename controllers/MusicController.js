@@ -1,8 +1,6 @@
-const fs = require("fs")
 const { URL } = require("url")
 const http = require("http")
 const https = require("https")
-const cloudinary = require("cloudinary").v2
 
 const UserModel = require("../models/UserModel")
 const MusicModel = require("../models/MusicModel")
@@ -57,13 +55,12 @@ class PostController {
                 }
             }
 
-            // if middleware uploaded to Cloudinary, use that metadata
             if (req.file && req.file.cloudinary) {
                 const result = req.file.cloudinary
                 music.url = result.secure_url || result.url
                 music.public_id = result.public_id
                 music.format = result.format
-                music.size = result.bytes || req.file.size
+                music.size = typeof result.bytes === "number" ? result.bytes : undefined
                 await music.save()
             }
 

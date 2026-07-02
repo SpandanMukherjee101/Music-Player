@@ -148,8 +148,8 @@ genre: ["pop", "edm"]
 
 Notes:
 - `info` is required and must be a non-empty string.
-- `genre` must be an array with at least one valid genre value.
-- The uploaded file is uploaded to Cloudinary (the server uses the `CLOUDINARY_URL` environment variable) and stored remotely; the response includes file metadata such as `url`, `public_id`, `format`, and `size`.
+- `genre` must be an array with at least one valid genre value. You can send repeated `genre` fields or a JSON array in form-data.
+- The uploaded file is streamed in chunks from the backend to Cloudinary (the server uses the `CLOUDINARY_URL` environment variable) and is stored remotely; the response includes file metadata such as `url`, `public_id`, `format`, and `size`.
 
 Success response:
 ```json
@@ -172,13 +172,18 @@ Success response:
 - Method: `GET`
 - Path: `/api/auth/musics/stream/:id`
 - Auth required: Yes
-- Description: Stream audio in chunks from the remote storage. This endpoint supports the `Range` header and proxies byte-range requests so players can request and buffer parts of the file instead of downloading the whole file.
+- Description: Stream audio in chunks from the backend. This endpoint supports the `Range` header and proxies byte-range requests so players can request and buffer parts of the file instead of downloading the whole file.
 
 Example:
 ```http
 GET /api/auth/musics/stream/64f0e3f0d2a1b2c3d4e5f678
 Range: bytes=0-
 ```
+
+Notes:
+- The endpoint forwards `Range` requests to the remote file storage and returns `Content-Range`, `Content-Length`, and `Content-Type` headers required for chunked playback.
+- Use `/api/auth/musics/stream/:id` for playback in audio players rather than the direct Cloudinary URL to avoid exposing direct download links and to support native streaming behavior.
+
 
 Notes:
 - The endpoint forwards `Range` requests to the remote file (Cloudinary) and returns the appropriate `Content-Range`/`Content-Length`/`Content-Type` headers to allow HTML `<audio>` elements or other players to stream and seek within the file.
