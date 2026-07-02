@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const UserModel = require("../models/UserModel")
+const MusicModel = require("../models/MusicModel")
 require("dotenv").config()
 
 const SECRET_KEY = process.env.SECRET_KEY
@@ -73,6 +74,20 @@ class UserController {
             const user = await UserModel.findOne({ email: req.email })
             if (!user) {
                 return res.status(404).json({ message: "User not found" })
+            }
+
+            const validMusics = await MusicModel.find({ _id: { $in: user.musics } }, "_id")
+            const validMusicIds = [...new Set(validMusics.map((m) => m._id.toString()))]
+            if (validMusicIds.length !== user.musics.length || new Set(user.musics.map(id => id.toString())).size !== user.musics.length) {
+                user.musics = validMusicIds
+                await user.save()
+            }
+
+            const validLikes = await MusicModel.find({ _id: { $in: user.likes } }, "_id")
+            const validLikeIds = [...new Set(validLikes.map((m) => m._id.toString()))]
+            if (validLikeIds.length !== user.likes.length || new Set(user.likes.map(id => id.toString())).size !== user.likes.length) {
+                user.likes = validLikeIds
+                await user.save()
             }
 
             res.json({

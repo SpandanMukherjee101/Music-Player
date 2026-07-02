@@ -170,8 +170,15 @@ class PostController {
                 return res.status(403).json({ message: "Unauthorized" })
             }
 
-            user.musics.pull(music._id)
+            const targetId = music._id.toString()
+            user.musics = user.musics.filter((id) => id.toString() !== targetId && id.toString() !== req.body.id.toString())
+            user.likes = user.likes.filter((id) => id.toString() !== targetId && id.toString() !== req.body.id.toString())
             await user.save()
+
+            await UserModel.updateMany({}, {
+                $pull: { musics: music._id, likes: music._id }
+            })
+
             await MusicModel.findByIdAndDelete(music._id)
             res.status(200).json({ message: "Deleted" })
         } catch (error) {
@@ -194,8 +201,10 @@ class PostController {
             const alreadyLiked = music.likes.some((id) => id.equals(user._id))
             if (!alreadyLiked) {
                 music.likes.push(user._id)
-                user.likes.push(music._id)
                 await music.save()
+            }
+            if (!user.likes.some((id) => id.equals(music._id))) {
+                user.likes.push(music._id)
                 await user.save()
             }
 
