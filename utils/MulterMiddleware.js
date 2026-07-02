@@ -1,7 +1,5 @@
-﻿const BusboyPackage = require("busboy")
+﻿const Busboy = require("busboy")
 const cloudinary = require("cloudinary").v2
-
-const Busboy = BusboyPackage?.Busboy || BusboyPackage
 
 module.exports = (req, res, next) => {
     if (!req.headers["content-type"] || !req.headers["content-type"].includes("multipart/form-data")) {
