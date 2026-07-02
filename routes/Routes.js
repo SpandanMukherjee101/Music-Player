@@ -4,7 +4,7 @@ const UsersRoute= require("./UsersRoute")
 const auth= require("../middlewares/AuthVerify.js")
 
 const express= require("express")
-let Routes= express()
+const Routes= express.Router()
 
 Routes.use('/auth', auth, AuthRoutes)
 Routes.use('/', UsersRoute)

@@ -1,7 +1,7 @@
 const feeds= require("../controllers/FeedController.js")
 
 const express= require("express")
-let feedsRoutes= express()
+const feedsRoutes= express.Router()
 
 feedsRoutes.get("/:genre/:pg", feeds.get)
 

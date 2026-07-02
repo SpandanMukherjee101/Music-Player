@@ -2,7 +2,7 @@ const musics= require("../controllers/MusicController.js")
 const upload= require("../utils/MulterMiddleware.js")
 
 const express= require("express")
-let musicsRoutes= express()
+const musicsRoutes= express.Router()
 
 musicsRoutes.post("/upload", upload, musics.upload)
 musicsRoutes.get("/search/:name", musics.search)

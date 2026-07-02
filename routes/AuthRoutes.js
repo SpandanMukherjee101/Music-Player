@@ -6,7 +6,7 @@ const feed= require("./FeedRoutes.js")
 const comments= require("./CommentRoutes.js")
 
 const express= require("express")
-let AuthRoutes= express()
+const AuthRoutes= express.Router()
 
 AuthRoutes.use("/follow", follow)
 AuthRoutes.use("/musics", musics)

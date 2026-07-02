@@ -1,7 +1,7 @@
 const follow= require("../controllers/FollowController.js")
 
 const express= require("express")
-let followRoutes= express()
+const followRoutes= express.Router()
 
 followRoutes.get("/search/:uid", follow.search)
 followRoutes.patch("/follow/:uid", follow.follow)
