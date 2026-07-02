@@ -1,4 +1,4 @@
-﻿const Busboy = require("busboy")
+﻿const { Busboy } = require("busboy")
 const cloudinary = require("cloudinary").v2
 
 module.exports = (req, res, next) => {
