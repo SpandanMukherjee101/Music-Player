@@ -1,4 +1,4 @@
-﻿const busboy = require("busboy");
+const busboy = require("busboy");
 const cloudinary = require("cloudinary").v2;
 
 module.exports = (req, res, next) => {
@@ -15,8 +15,14 @@ module.exports = (req, res, next) => {
     let finished = false;
     let fileInfo = {};
 
+    let nextCalled = false;
+
     const maybeFinish = () => {
+        if (nextCalled) return;
         if (!finished) return;
+        if (fileHandled && !uploadResult && !uploadError) return;
+
+        nextCalled = true;
         if (uploadError) return next(uploadError);
 
         req.body = { ...req.body, ...fields };
