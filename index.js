@@ -11,8 +11,17 @@ const Routes = require("./routes/Routes.js")
 const app = express()
 
 app.disable("x-powered-by")
+app.set("trust proxy", 1)
 app.use(helmet())
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*", credentials: true }))
+
+const corsOptions = {
+    origin: process.env.CLIENT_ORIGIN || true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+}
+app.use(cors(corsOptions))
+app.options("*", cors(corsOptions))
+
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"))
 app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true, limit: "10mb" }))
