@@ -1,14 +1,22 @@
+const mongoose = require("mongoose")
 const UserModel = require("../models/UserModel")
+
+const findUserByParam = async (uid) => {
+    const query = mongoose.isValidObjectId(uid)
+        ? { $or: [{ userid: uid }, { _id: uid }] }
+        : { userid: uid };
+    return await UserModel.findOne(query);
+};
 
 class followController {
     async search(req, res, next) {
         try {
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            const userFind = await findUserByParam(req.params.uid)
             if (!userFind) {
                 return res.status(404).json({ message: "User not found" })
             }
 
-            res.status(200).json({ name: userFind.name, musics: userFind.musics })
+            res.status(200).json({ userid: userFind.userid, name: userFind.name, musics: userFind.musics, _id: userFind._id })
         } catch (error) {
             next(error)
         }
@@ -21,7 +29,7 @@ class followController {
                 return res.status(404).json({ message: "User not found" })
             }
 
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            const userFind = await findUserByParam(req.params.uid)
             if (!userFind) {
                 return res.status(404).json({ message: "Target user not found" })
             }
@@ -52,7 +60,7 @@ class followController {
                 return res.status(404).json({ message: "User not found" })
             }
 
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            const userFind = await findUserByParam(req.params.uid)
             if (!userFind) {
                 return res.status(404).json({ message: "Target user not found" })
             }
@@ -69,7 +77,7 @@ class followController {
 
     async followers(req, res, next) {
         try {
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            const userFind = await findUserByParam(req.params.uid)
             if (!userFind) {
                 return res.status(404).json({ message: "User not found" })
             }
@@ -83,7 +91,7 @@ class followController {
 
     async following(req, res, next) {
         try {
-            const userFind = await UserModel.findOne({ userid: req.params.uid })
+            const userFind = await findUserByParam(req.params.uid)
             if (!userFind) {
                 return res.status(404).json({ message: "User not found" })
             }
