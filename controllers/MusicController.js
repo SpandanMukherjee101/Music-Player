@@ -1,3 +1,9 @@
+const fs = require("fs")
+const { URL } = require("url")
+const http = require("http")
+const https = require("https")
+const cloudinary = require("cloudinary").v2
+
 const UserModel = require("../models/UserModel")
 const MusicModel = require("../models/MusicModel")
 const popModel = require("../models/PopModel")
@@ -51,6 +57,16 @@ class PostController {
                 }
             }
 
+            // if middleware uploaded to Cloudinary, use that metadata
+            if (req.file && req.file.cloudinary) {
+                const result = req.file.cloudinary
+                music.url = result.secure_url || result.url
+                music.public_id = result.public_id
+                music.format = result.format
+                music.size = result.bytes || req.file.size
+                await music.save()
+            }
+
             res.status(201).json(music)
         } catch (error) {
             next(error)
@@ -70,6 +86,44 @@ class PostController {
             }
 
             res.status(200).json({ userid: user.userid, info: music.info, genre: music.genre, likes: music.likes.length })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async stream(req, res, next) {
+        try {
+            const music = await MusicModel.findById(req.params.id)
+            if (!music || !music.url) {
+                return res.status(404).json({ message: "Music or source URL not found" })
+            }
+
+            const range = req.headers.range || "bytes=0-"
+            const parsed = new URL(music.url)
+            const requester = parsed.protocol === "https:" ? https : http
+
+            const options = {
+                hostname: parsed.hostname,
+                port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
+                path: parsed.pathname + (parsed.search || ""),
+                method: "GET",
+                headers: {
+                    Range: range,
+                },
+            }
+
+            const upstream = requester.request(options, (upstreamRes) => {
+                // propagate status and selected headers
+                res.statusCode = upstreamRes.statusCode
+                const copyHeaders = ["content-type", "content-length", "accept-ranges", "content-range"]
+                copyHeaders.forEach((h) => {
+                    if (upstreamRes.headers[h]) res.setHeader(h, upstreamRes.headers[h])
+                })
+                upstreamRes.pipe(res)
+            })
+
+            upstream.on("error", (err) => next(err))
+            upstream.end()
         } catch (error) {
             next(error)
         }

@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
     "morgan": "^1.11.0",
-    "multer": "^2.0.0"
+    "multer": "^2.0.0",
+    "cloudinary": "^1.37.0"
   }
 }

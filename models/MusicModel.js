@@ -27,6 +27,22 @@ const musicSchema= new mongoose.Schema({
         ref: "comments"
     }],
 
+    url: {
+        type: String,
+    },
+
+    public_id: {
+        type: String,
+    },
+
+    format: {
+        type: String,
+    },
+
+    size: {
+        type: Number,
+    },
+
     createdAt: {
         type: Date,
         default: Date.now
