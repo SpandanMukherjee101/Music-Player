@@ -53,7 +53,14 @@ connectDB().catch((error) => {
     console.error("Initial MongoDB connection failed:", error.message)
 })
 
-app.use("/api/", Routes)
+app.use(["/api", "/"], async (req, res, next) => {
+    try {
+        await connectDB()
+        next()
+    } catch (error) {
+        next(error)
+    }
+}, Routes)
 
 app.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome! This is a production-ready Music Player Backend API." })
@@ -79,3 +86,5 @@ process.on("SIGTERM", () => {
         mongoose.connection.close(false)
     })
 })
+
+module.exports = app;
