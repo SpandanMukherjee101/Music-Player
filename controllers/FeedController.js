@@ -22,6 +22,16 @@ const genreModels = {
     indie: indieModel,
 }
 
+const formatTracks = (tracks) => {
+    return tracks.filter(Boolean).map((t) => {
+        const obj = typeof t.toObject === "function" ? t.toObject() : { ...t };
+        if (obj.user && typeof obj.user === "object" && obj.user.userid) {
+            obj.user = obj.user.userid;
+        }
+        return obj;
+    });
+};
+
 class FeedController {
     async get(req, res, next) {
         try {
@@ -41,19 +51,19 @@ class FeedController {
                     return res.status(200).json({ data: [] })
                 }
 
-                const musics = await Promise.all(musicIds.map((id) => MusicModel.findById(id)))
-                return res.json(musics.filter(Boolean))
+                const musics = await Promise.all(musicIds.map((id) => MusicModel.findById(id).populate("user", "userid name")))
+                return res.json(formatTracks(musics))
             }
 
             if (genre === "all") {
                 const total = await MusicModel.countDocuments()
-                const musics = await MusicModel.find().skip(startIndex).limit(limit)
+                const musics = await MusicModel.find().skip(startIndex).limit(limit).populate("user", "userid name")
                 return res.json({
                     start,
                     limit,
                     total,
                     pages: Math.ceil(total / limit),
-                    data: musics,
+                    data: formatTracks(musics),
                 })
             }
 
@@ -64,14 +74,14 @@ class FeedController {
 
             const total = await model.countDocuments()
             const entries = await model.find().skip(startIndex).limit(limit)
-            const musics = await Promise.all(entries.map((entry) => MusicModel.findById(entry.m_id)))
+            const musics = await Promise.all(entries.map((entry) => MusicModel.findById(entry.m_id).populate("user", "userid name")))
 
             return res.json({
                 start,
                 limit,
                 total,
                 pages: Math.ceil(total / limit),
-                data: musics.filter(Boolean),
+                data: formatTracks(musics),
             })
         } catch (error) {
             next(error)

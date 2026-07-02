@@ -26,6 +26,16 @@ const genreModels = {
     indie: indieModel,
 }
 
+const formatTracks = (tracks) => {
+    return tracks.filter(Boolean).map((t) => {
+        const obj = typeof t.toObject === "function" ? t.toObject() : { ...t };
+        if (obj.user && typeof obj.user === "object" && obj.user.userid) {
+            obj.user = obj.user.userid;
+        }
+        return obj;
+    });
+};
+
 class PostController {
     async upload(req, res, next) {
         try {
@@ -64,7 +74,9 @@ class PostController {
                 await music.save()
             }
 
-            res.status(201).json(music)
+            const resData = music.toObject()
+            resData.user = user.userid
+            res.status(201).json(resData)
         } catch (error) {
             next(error)
         }
@@ -116,6 +128,8 @@ class PostController {
                 copyHeaders.forEach((h) => {
                     if (upstreamRes.headers[h]) res.setHeader(h, upstreamRes.headers[h])
                 })
+                res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
+                res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*")
                 upstreamRes.pipe(res)
             })
 
@@ -133,8 +147,8 @@ class PostController {
                 return res.status(400).json({ message: "Search term is required" })
             }
 
-            const musics = await MusicModel.find({ info: { $regex: query, $options: "i" } }).limit(20)
-            res.json(musics)
+            const musics = await MusicModel.find({ info: { $regex: query, $options: "i" } }).limit(20).populate("user", "userid name")
+            res.json(formatTracks(musics))
         } catch (error) {
             next(error)
         }

@@ -2,6 +2,16 @@ const CommentModel = require("../models/CommentModel")
 const UserModel = require("../models/UserModel")
 const MusicModel = require("../models/MusicModel")
 
+const formatComments = (comments) => {
+    return comments.filter(Boolean).map((c) => {
+        const obj = typeof c.toObject === "function" ? c.toObject() : { ...c };
+        if (obj.user && typeof obj.user === "object" && obj.user.userid) {
+            obj.user = obj.user.userid;
+        }
+        return obj;
+    });
+};
+
 class CommentController {
     async create(req, res, next) {
         try {
@@ -26,7 +36,9 @@ class CommentController {
             music.comments.push(comment._id)
             await music.save()
 
-            res.status(201).json({ comment, user: { userid: user.userid, name: user.name }, music: { id: music._id } })
+            const comObj = comment.toObject()
+            comObj.user = user.userid
+            res.status(201).json({ comment: comObj, user: { userid: user.userid, name: user.name }, music: { id: music._id } })
         } catch (error) {
             next(error)
         }
@@ -38,8 +50,8 @@ class CommentController {
             const limit = 10
             const startIndex = (start - 1) * limit
 
-            const comments = await CommentModel.find({ m_id: req.params.m_id }).skip(startIndex).limit(limit)
-            res.json(comments)
+            const comments = await CommentModel.find({ m_id: req.params.m_id }).skip(startIndex).limit(limit).populate("user", "userid name")
+            res.json(formatComments(comments))
         } catch (error) {
             next(error)
         }

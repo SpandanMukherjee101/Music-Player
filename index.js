@@ -13,7 +13,12 @@ const app = express()
 
 app.disable("x-powered-by")
 app.set("trust proxy", 1)
-app.use(helmet())
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        crossOriginOpenerPolicy: { policy: "unsafe-none" },
+    })
+)
 
 const corsOptions = {
     origin: process.env.CLIENT_ORIGIN || true,
