@@ -28,6 +28,12 @@ const formatTracks = (tracks) => {
         if (obj.user && typeof obj.user === "object" && obj.user.userid) {
             obj.user = obj.user.userid;
         }
+        if (Array.isArray(obj.likes)) {
+            obj.likes = [...new Set(obj.likes.map((id) => id.toString()))];
+        }
+        if (Array.isArray(obj.comments)) {
+            obj.comments = [...new Set(obj.comments.map((id) => id.toString()))];
+        }
         return obj;
     });
 };
