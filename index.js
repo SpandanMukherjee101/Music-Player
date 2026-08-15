@@ -67,6 +67,19 @@ app.use(["/api", "/"], async (req, res, next) => {
     }
 }, Routes)
 
+app.get("/api/ping", async (req, res) => {
+    try {
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.db.admin().ping()
+            res.status(200).json({ message: "Database pinged successfully" })
+        } else {
+            res.status(500).json({ message: "Database is not connected" })
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Database ping failed", error: error.message })
+    }
+})
+
 app.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome! This is a production-ready Music Player Backend API." })
 })

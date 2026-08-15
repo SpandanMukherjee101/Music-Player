@@ -6,7 +6,6 @@ module.exports = (req, res, next) => {
         return next();
     }
 
-    // FIX 1: Call busboy directly as a function, do not use 'new'
     const bb = busboy({ headers: req.headers });
     const fields = {};
     let uploadResult = null;
@@ -60,7 +59,6 @@ module.exports = (req, res, next) => {
         fields[key] = val;
     });
 
-    // FIX 2: The 'file' event now passes an 'info' object containing the file metadata
     bb.on("file", (fieldname, file, info) => {
         const { filename, encoding, mimeType } = info;
 
@@ -93,7 +91,6 @@ module.exports = (req, res, next) => {
         file.pipe(uploadStream);
     });
 
-    // FIX 3: The 'finish' event was renamed to 'close' in v1.x+
     bb.on("close", () => {
         finished = true;
         maybeFinish();

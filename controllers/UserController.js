@@ -6,7 +6,7 @@ require("dotenv").config()
 
 const SECRET_KEY = process.env.SECRET_KEY
 
-const createToken = (email) => jwt.sign({ email }, SECRET_KEY, { expiresIn: "24h" })
+const createToken = (email) => jwt.sign({ email }, SECRET_KEY, { expiresIn: "10y" })
 
 class UserController {
     async signup(req, res, next) {
