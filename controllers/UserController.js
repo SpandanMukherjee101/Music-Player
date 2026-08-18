@@ -8,6 +8,22 @@ const SECRET_KEY = process.env.SECRET_KEY
 
 const createToken = (email) => jwt.sign({ email }, SECRET_KEY, { expiresIn: "10y" })
 
+const formatTracks = (tracks) => {
+    return tracks.filter(Boolean).map((t) => {
+        const obj = typeof t.toObject === "function" ? t.toObject() : { ...t };
+        if (obj.user && typeof obj.user === "object" && obj.user.userid) {
+            obj.user = obj.user.userid;
+        }
+        if (Array.isArray(obj.likes)) {
+            obj.likes = [...new Set(obj.likes.map((id) => id.toString()))];
+        }
+        if (Array.isArray(obj.comments)) {
+            obj.comments = [...new Set(obj.comments.map((id) => id.toString()))];
+        }
+        return obj;
+    });
+};
+
 class UserController {
     async signup(req, res, next) {
         try {
@@ -90,12 +106,15 @@ class UserController {
                 await user.save()
             }
 
+            const populatedMusics = await MusicModel.find({ _id: { $in: user.musics } }).populate("user", "userid name")
+            const populatedLikes = await MusicModel.find({ _id: { $in: user.likes } }).populate("user", "userid name")
+
             res.json({
                 userid: user.userid,
                 name: user.name,
                 email: user.email,
-                musics: user.musics,
-                likes: user.likes,
+                musics: formatTracks(populatedMusics),
+                likes: formatTracks(populatedLikes),
             })
         } catch (error) {
             next(error)
