@@ -110,6 +110,7 @@ class UserController {
             const populatedLikes = await MusicModel.find({ _id: { $in: user.likes } }).populate("user", "userid name")
 
             res.json({
+                _id: user._id,
                 userid: user.userid,
                 name: user.name,
                 email: user.email,
